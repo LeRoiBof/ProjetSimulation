@@ -177,16 +177,18 @@ def compute_statistics(runs, n):
         [27892, 55789, 83685, 111580, 139476, 172860]
     ])
 
-    b_vector = np.array([8, 6, 10, 14, 20, 24])
+    b_vector = np.array([0.166, 0.20833, 0.09167, 0.026389, 0.00575397, 0.001190476])
 
     # Compute mean values
-    means = np.array([n / b for b in b_vector])
-
-    # Compute deviations
-    deviations = count[:t] - means[:t]
+    means = np.array([n * b for b in b_vector])
 
     # Compute V statistic
-    V = n * deviations @ np.linalg.inv(a_matrix) @ deviations.T
+    V = 0
+    for i in range(t):
+        for j in range(t):
+            V += (count[i] - means[i]) * (count[j] - means[j]) * a_matrix[i, j]
+
+    V /= n
 
     return V, count, means, a_matrix
 
@@ -294,7 +296,6 @@ def custom_generator_test(pi_decimals):
         f.write(f"Reject null hypothesis: {result['reject_null']}\n")
         f.write(f"Observed counts: {result['observed_counts']}\n")
         f.write(f"Expected means: {result['expected_means']}\n")
-        f.write(f"Covariance matrix:\n{result['covariance_matrix']}\n")
 
     # Perform a Chi-Square test on the generated random numbers
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
@@ -336,7 +337,6 @@ def python_generator_test():
         f.write(f"Reject null hypothesis: {result['reject_null']}\n")
         f.write(f"Observed counts: {result['observed_counts']}\n")
         f.write(f"Expected means: {result['expected_means']}\n")
-        f.write(f"Covariance matrix:\n{result['covariance_matrix']}\n")
 
     # Perform a Chi-Square test on the generated random numbers
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
@@ -375,7 +375,6 @@ def pi_decimals_test(pi_decimals):
         f.write(f"Reject null hypothesis: {result['reject_null']}\n")
         f.write(f"Observed counts: {result['observed_counts']}\n")
         f.write(f"Expected means: {result['expected_means']}\n")
-        f.write(f"Covariance matrix:\n{result['covariance_matrix']}\n")
 
     # Perform a Chi-Square test on the decimals of pi
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
