@@ -15,14 +15,15 @@ def get_pi_decimals(file):
 
 # This function generates random numbers based on the decimals of pi.
 # It yields a new random number each time it is called.
-def generate_random_numbers(pi_decimals, slice_size):
-    index = 0
+def generate_random_numbers(pi_decimals, slice_size, seed = 3134):
+    jump = seed
+    index = seed % (len(pi_decimals) - slice_size)
     while True:
         if index + slice_size > len(pi_decimals):
             index = 0
         slice = pi_decimals[index:index + slice_size]
-        index += slice_size
         random_number = int(slice)
+        index += slice_size + jump
         yield random_number / 10 ** slice_size
 
 
@@ -91,7 +92,7 @@ def gap_test(sequence, alpha, beta, t, n):
     critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
 
     # Compare chi-square statistic with critical value
-    reject_null = chi_square_statistic > critical_value
+    reject_null = chi_square_statistic < critical_value
 
     return {
         "observed_counts": observed,
@@ -213,7 +214,7 @@ def runs_test(sequence):
     critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
 
     # Compare V statistic with critical value
-    reject_null = V > critical_value
+    reject_null = V < critical_value
 
     return {
         "V_statistic": V,
@@ -255,7 +256,7 @@ def chisquare_test(sequence):
     critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
 
     # Determine whether to reject the null hypothesis
-    reject_null = chi_square_statistic > critical_value
+    reject_null = chi_square_statistic < critical_value
 
     return {
         "observed_counts": observed_counts,
@@ -267,7 +268,7 @@ def chisquare_test(sequence):
 
 def custom_generator_test(pi_decimals):
     # Generate random numbers based on the decimals of pi
-    random_number_generator = generate_random_numbers(pi_decimals, 1)
+    random_number_generator = generate_random_numbers(pi_decimals, 6)
 
     # Perform a gap test on the generated random numbers
     # The gap test checks if the numbers in the sequence are uniformly distributed
@@ -310,7 +311,7 @@ def custom_generator_test(pi_decimals):
 
 def python_generator_test():
     # Generate random numbers using the Python random module
-    random_numbers = [random.random() for _ in range(1000)]
+    random_numbers = [random.uniform(0, 1) for _ in range(1000)]
 
     # Perform a gap test on the generated random numbers
     # The gap test checks if the numbers in the sequence are uniformly distributed
