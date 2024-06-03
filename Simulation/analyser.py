@@ -1,3 +1,4 @@
+import json
 import random
 from collections import Counter
 
@@ -26,7 +27,21 @@ def generate_random_numbers(pi_decimals, slice_size):
 
 
 def gap_test(sequence, alpha, beta, t, n):
-    print(f"Sequence: {sequence}")
+    """
+    Perform a gap test on a sequence of numbers.
+
+    The gap test is a statistical test that checks if the numbers in the sequence are uniformly distributed.
+
+    Parameters:
+    sequence (list): The sequence of numbers to test.
+    alpha (float): The lower bound of the interval.
+    beta (float): The upper bound of the interval.
+    t (int): The maximum gap length to consider.
+    n (int): The number of gaps to consider.
+
+    Returns:
+    dict: A dictionary containing the observed counts, expected counts, chi-square statistic, critical value, and whether to reject the null hypothesis.
+    """
     # Initialize
     count = [0] * (t + 1)
     j = -1
@@ -36,22 +51,18 @@ def gap_test(sequence, alpha, beta, t, n):
     p = beta - alpha
 
     while s < n:
-        print(f"Step {s}")
         # Set T zero
         r = 0
         while True:
             # Increase j
             j += 1
             if j >= len(sequence):
-                print(f"Reached end of sequence at step {s}.")
                 break
 
             # Check if sequence[j] is in the range [alpha, beta)
-            print(type(sequence[j]))
             if alpha <= sequence[j] < beta:
                 break
             else:
-                print(f"Sequence[{j}] = {sequence[j]} is not in the range [{alpha}, {beta}).")
                 # Increase r
                 r += 1
 
@@ -91,24 +102,303 @@ def gap_test(sequence, alpha, beta, t, n):
     }
 
 
-def maximum_test():
-    #TODO: Implement the maximum test
-    pass
+def calculate_runs(sequence):
+    """
+    Calculate the runs in a sequence.
 
-def chisquare_test():
-    #TODO: Implement the chi-square test
-    pass
+    A run is defined as a sequence of increasing or decreasing numbers. The function calculates the length of each run.
 
-if __name__ == "__main__":
-    # Get the decimals of pi
-    pi_decimals = get_pi_decimals("pi_decimals_single_line.txt")
+    Parameters:
+    sequence (list): The sequence of numbers to calculate runs for.
 
+    Returns:
+    list: A list of run lengths.
+    """
+    runs = []
+    run_length = 1
+    increasing = None
+
+    for i in range(1, len(sequence)):
+        if sequence[i] > sequence[i - 1]:
+            if increasing is None or increasing:
+                run_length += 1
+                increasing = True
+            else:
+                runs.append(run_length)
+                run_length = 1
+                increasing = True
+        elif sequence[i] < sequence[i - 1]:
+            if increasing is None or not increasing:
+                run_length += 1
+                increasing = False
+            else:
+                runs.append(run_length)
+                run_length = 1
+                increasing = False
+        else:
+            runs.append(run_length)
+            run_length = 1
+            increasing = None
+
+    runs.append(run_length)
+    return runs
+
+
+def compute_statistics(runs, n):
+    """
+    Compute the statistics for the runs test.
+
+    The function calculates the V statistic, which is used in the runs test.
+
+    Parameters:
+    runs (list): The list of run lengths.
+    n (int): The total number of runs.
+
+    Returns:
+    tuple: A tuple containing the V statistic, the observed counts, the expected means, and the covariance matrix.
+    """
+    t = 6
+    count = [0] * (t + 1)
+
+    for run in runs:
+        if run >= t:
+            count[t] += 1
+        else:
+            count[run] += 1
+
+    # Coefficients (approximate values from provided matrix)
+    a_matrix = np.array([
+        [4529.4, 9044.9, 13568, 18091, 22615, 27892],
+        [9044.9, 18097, 27139, 36187, 45234, 55789],
+        [13568, 27139, 40721, 54281, 67852, 83685],
+        [18091, 36187, 54281, 72414, 90470, 111580],
+        [22615, 45234, 67852, 90470, 113262, 139476],
+        [27892, 55789, 83685, 111580, 139476, 172860]
+    ])
+
+    b_vector = np.array([8, 6, 10, 14, 20, 24])
+
+    # Compute mean values
+    means = np.array([n / b for b in b_vector])
+
+    # Compute deviations
+    deviations = count[:t] - means[:t]
+
+    # Compute V statistic
+    V = n * deviations @ np.linalg.inv(a_matrix) @ deviations.T
+
+    return V, count, means, a_matrix
+
+
+def runs_test(sequence):
+    """
+    Perform a runs test on a sequence of numbers.
+
+    The runs test is a statistical test that checks if the numbers in the sequence are randomly distributed.
+
+    Parameters:
+    sequence (list): The sequence of numbers to test.
+
+    Returns:
+    dict: A dictionary containing the V statistic, the critical value, whether to reject the null hypothesis, the observed counts, the expected means, and the covariance matrix.
+    """
+    runs = calculate_runs(sequence)
+    n = len(sequence)
+    V, observed_counts, expected_means, covariance_matrix = compute_statistics(runs, n)
+
+    # Degrees of freedom
+    degrees_of_freedom = 6
+
+    # Critical value
+    critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
+
+    # Compare V statistic with critical value
+    reject_null = V > critical_value
+
+    return {
+        "V_statistic": V,
+        "critical_value": critical_value,
+        "reject_null": reject_null,
+        "observed_counts": observed_counts,
+        "expected_means": expected_means,
+        "covariance_matrix": covariance_matrix
+    }
+
+def chisquare_test(sequence):
+    """
+    Perform a Chi-Square test on a sequence of numbers.
+
+    The Chi-Square test is a statistical test that checks if the observed counts of numbers in the sequence
+    are significantly different from the expected counts.
+
+    Parameters:
+    sequence (list): The sequence of numbers to test.
+
+    Returns:
+    dict: A dictionary containing the observed counts, expected counts, Chi-Square statistic, critical value,
+    and whether to reject the null hypothesis.
+    """
+    # Count the occurrence of each number in the sequence
+    observed_counts = Counter(sequence)
+    n = len(sequence)
+
+    # Calculate the expected counts for each number
+    expected_counts = {key: n / 10 for key in observed_counts.keys()}
+
+    # Calculate the Chi-Square statistic
+    chi_square_statistic = sum((observed_counts[key] - expected_counts[key]) ** 2 / expected_counts[key] for key in observed_counts.keys())
+
+    # Calculate the degrees of freedom
+    degrees_of_freedom = len(observed_counts) - 1
+
+    # Calculate the critical value
+    critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
+
+    # Determine whether to reject the null hypothesis
+    reject_null = chi_square_statistic > critical_value
+
+    return {
+        "observed_counts": observed_counts,
+        "expected_counts": expected_counts,
+        "chi_square_statistic": chi_square_statistic,
+        "critical_value": critical_value,
+        "reject_null": reject_null
+    }
+
+def custom_generator_test(pi_decimals):
     # Generate random numbers based on the decimals of pi
     random_number_generator = generate_random_numbers(pi_decimals, 1)
 
+    # Perform a gap test on the generated random numbers
+    # The gap test checks if the numbers in the sequence are uniformly distributed
     result = gap_test([next(random_number_generator) for _ in range(1000)], 0.2, 0.5, 5, 1000)
-    print(f"Observed counts: {result['observed_counts']}")
-    print(f"Expected counts: {result['expected_counts']}")
-    print(f"Chi-square statistic: {result['chi_square_statistic']}")
-    print(f"Critical value: {result['critical_value']}")
-    print(f"Reject null hypothesis: {result['reject_null']}")
+
+    # Write the result to a file
+    with open("custom_generator_test_results.txt", "w") as f:
+        f.write(f"----------- Gap test -----------\n")
+        f.write(f"Observed counts: {result['observed_counts']}\n")
+        f.write(f"Expected counts: {result['expected_counts']}\n")
+        f.write(f"Chi-square statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical value: {result['critical_value']}\n")
+        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
+
+    # Perform a runs test on the generated random numbers
+    # The runs test checks if the numbers in the sequence are randomly distributed
+    result = runs_test([next(random_number_generator) for _ in range(1000)])
+
+    with open("custom_generator_test_results.txt", "a") as f:
+        f.write(f"----------- Runs test -----------\n")
+        f.write(f"V statistic: {result['V_statistic']}\n")
+        f.write(f"Critical value: {result['critical_value']}\n")
+        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
+        f.write(f"Observed counts: {result['observed_counts']}\n")
+        f.write(f"Expected means: {result['expected_means']}\n")
+        f.write(f"Covariance matrix:\n{result['covariance_matrix']}\n")
+
+    # Perform a Chi-Square test on the generated random numbers
+    # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
+    result = chisquare_test([next(random_number_generator) for _ in range(1000)])
+
+    with open("custom_generator_test_results.txt", "a") as f:
+        f.write(f"----------- Chi-Square test -----------\n")
+        f.write(f"Observed counts: {result['observed_counts']}\n")
+        f.write(f"Expected counts: {result['expected_counts']}\n")
+        f.write(f"Chi-square statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical value: {result['critical_value']}\n")
+        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
+
+
+def python_generator_test():
+    # Generate random numbers using the Python random module
+    random_numbers = [random.random() for _ in range(1000)]
+
+    # Perform a gap test on the generated random numbers
+    # The gap test checks if the numbers in the sequence are uniformly distributed
+    result = gap_test(random_numbers, 0.2, 0.5, 5, 1000)
+
+    with open("python_generator_test_results.txt", "w") as f:
+        f.write(f"----------- Gap test -----------\n")
+        f.write(f"Observed counts: {result['observed_counts']}\n")
+        f.write(f"Expected counts: {result['expected_counts']}\n")
+        f.write(f"Chi-square statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical value: {result['critical_value']}\n")
+        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
+
+    # Perform a runs test on the generated random numbers
+    # The runs test checks if the numbers in the sequence are randomly distributed
+    result = runs_test(random_numbers)
+
+    with open("python_generator_test_results.txt", "a") as f:
+        f.write(f"----------- Runs test -----------\n")
+        f.write(f"V statistic: {result['V_statistic']}\n")
+        f.write(f"Critical value: {result['critical_value']}\n")
+        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
+        f.write(f"Observed counts: {result['observed_counts']}\n")
+        f.write(f"Expected means: {result['expected_means']}\n")
+        f.write(f"Covariance matrix:\n{result['covariance_matrix']}\n")
+
+    # Perform a Chi-Square test on the generated random numbers
+    # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
+    result = chisquare_test(random_numbers)
+
+    with open("python_generator_test_results.txt", "a") as f:
+        f.write(f"----------- Chi-Square test -----------\n")
+        f.write(f"Observed counts: {result['observed_counts']}\n")
+        f.write(f"Expected counts: {result['expected_counts']}\n")
+        f.write(f"Chi-square statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical value: {result['critical_value']}\n")
+        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
+
+
+def pi_decimals_test(pi_decimals):
+    # Perform a gap test on the decimals of pi
+    # The gap test checks if the numbers in the sequence are uniformly distributed
+    result = gap_test([int(digit) for digit in pi_decimals], 0, 9, 5, 1000)
+
+    with open("pi_decimals_test_results.txt", "w") as f:
+        f.write(f"----------- Gap test -----------\n")
+        f.write(f"Observed counts: {result['observed_counts']}\n")
+        f.write(f"Expected counts: {result['expected_counts']}\n")
+        f.write(f"Chi-square statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical value: {result['critical_value']}\n")
+        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
+
+    # Perform a runs test on the decimals of pi
+    # The runs test checks if the numbers in the sequence are randomly distributed
+    result = runs_test([int(digit) for digit in pi_decimals])
+
+    with open("pi_decimals_test_results.txt", "a") as f:
+        f.write(f"----------- Runs test -----------\n")
+        f.write(f"V statistic: {result['V_statistic']}\n")
+        f.write(f"Critical value: {result['critical_value']}\n")
+        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
+        f.write(f"Observed counts: {result['observed_counts']}\n")
+        f.write(f"Expected means: {result['expected_means']}\n")
+        f.write(f"Covariance matrix:\n{result['covariance_matrix']}\n")
+
+    # Perform a Chi-Square test on the decimals of pi
+    # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
+    result = chisquare_test([int(digit) for digit in pi_decimals])
+
+    with open("pi_decimals_test_results.txt", "a") as f:
+        f.write(f"----------- Chi-Square test -----------\n")
+        f.write(f"Observed counts: {result['observed_counts']}\n")
+        f.write(f"Expected counts: {result['expected_counts']}\n")
+        f.write(f"Chi-square statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical value: {result['critical_value']}\n")
+        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
+
+
+
+if __name__ == "__main__":
+    # Get the decimals of pi from a file
+    pi_decimals = get_pi_decimals("pi_decimals_single_line.txt")
+
+    custom_generator_test(pi_decimals)
+
+    python_generator_test()
+
+    pi_decimals_test(pi_decimals)
+
+
+
