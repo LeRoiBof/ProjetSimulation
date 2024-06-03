@@ -92,7 +92,7 @@ def gap_test(sequence, alpha, beta, t, n):
     critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
 
     # Compare chi-square statistic with critical value
-    reject_null = chi_square_statistic < critical_value
+    reject_null = chi_square_statistic > critical_value
 
     return {
         "observed_counts": observed,
@@ -137,9 +137,10 @@ def calculate_runs(sequence):
                 run_length = 1
                 increasing = False
         else:
-            runs.append(run_length)
-            run_length = 1
-            increasing = None
+            if increasing is not None:
+                runs.append(run_length)
+                run_length = 1
+                increasing = None
 
     runs.append(run_length)
     return runs
@@ -177,7 +178,7 @@ def compute_statistics(runs, n):
         [27892, 55789, 83685, 111580, 139476, 172860]
     ])
 
-    b_vector = np.array([0.166, 0.20833, 0.09167, 0.026389, 0.00575397, 0.001190476])
+    b_vector = np.array([1/6, 5/24, 11/120, 19/720, 29/5040, 1/840])
 
     # Compute mean values
     means = np.array([n * b for b in b_vector])
@@ -188,7 +189,7 @@ def compute_statistics(runs, n):
         for j in range(t):
             V += (count[i] - means[i]) * (count[j] - means[j]) * a_matrix[i, j]
 
-    V /= n
+    V /= (n - 6)
 
     return V, count, means, a_matrix
 
@@ -216,7 +217,7 @@ def runs_test(sequence):
     critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
 
     # Compare V statistic with critical value
-    reject_null = V < critical_value
+    reject_null = V > critical_value
 
     return {
         "V_statistic": V,
@@ -227,7 +228,7 @@ def runs_test(sequence):
         "covariance_matrix": covariance_matrix
     }
 
-def chisquare_test(sequence):
+def chisquare_test(sequence, expected_probs=None):
     """
     Perform a Chi-Square test on a sequence of numbers.
 
@@ -245,8 +246,13 @@ def chisquare_test(sequence):
     observed_counts = Counter(sequence)
     n = len(sequence)
 
+    # If expected_probs is not provided, assume a uniform distribution
+    if expected_probs is None:
+        unique_values = observed_counts.keys()
+        expected_probs = {key: 1 / len(unique_values) for key in unique_values}
+
     # Calculate the expected counts for each number
-    expected_counts = {key: n / 10 for key in observed_counts.keys()}
+    expected_counts = {key: n * expected_probs[key] for key in observed_counts.keys()}
 
     # Calculate the Chi-Square statistic
     chi_square_statistic = sum((observed_counts[key] - expected_counts[key]) ** 2 / expected_counts[key] for key in observed_counts.keys())
@@ -258,7 +264,7 @@ def chisquare_test(sequence):
     critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
 
     # Determine whether to reject the null hypothesis
-    reject_null = chi_square_statistic < critical_value
+    reject_null = chi_square_statistic > critical_value
 
     return {
         "observed_counts": observed_counts,
