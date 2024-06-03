@@ -244,6 +244,7 @@ def chisquare_test(sequence, expected_probs=None):
     # Count the occurrence of each number in the sequence
     observed_counts = Counter(sequence)
     n = len(sequence)
+    k = len(observed_counts)
 
     # If expected_probs is not provided, assume a uniform distribution
     if expected_probs is None:
@@ -257,7 +258,7 @@ def chisquare_test(sequence, expected_probs=None):
     chi_square_statistic = sum((observed_counts[key] - expected_counts[key]) ** 2 / expected_counts[key] for key in observed_counts.keys())
 
     # Calculate the degrees of freedom
-    degrees_of_freedom = len(observed_counts) - 1
+    degrees_of_freedom = k - 1
 
     # Calculate the critical value
     critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
