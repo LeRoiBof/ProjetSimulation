@@ -216,7 +216,7 @@ def runs_test(sequence):
     critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
 
     # Compare V statistic with critical value
-    reject_null = V > critical_value
+    reject_null = V < critical_value
 
     return {
         "V_statistic": V,
