@@ -15,15 +15,14 @@ def get_pi_decimals(file):
 
 # This function generates random numbers based on the decimals of pi.
 # It yields a new random number each time it is called.
-def generate_random_numbers(pi_decimals, slice_size, seed = 3134):
-    jump = seed
-    index = seed % (len(pi_decimals) - slice_size)
+def generate_random_numbers(pi_decimals, slice_size):
     while True:
+        index = random.randint(0, len(pi_decimals) - 1)
         if index + slice_size > len(pi_decimals):
             index = 0
         slice = pi_decimals[index:index + slice_size]
         random_number = int(slice)
-        index += slice_size + jump
+
         yield random_number / 10 ** slice_size
 
 
