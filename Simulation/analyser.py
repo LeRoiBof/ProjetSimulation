@@ -192,40 +192,34 @@ def compute_statistics(runs, n):
 
     return V, count, means, a_matrix
 
+def poker_test(sequence, m):
 
-def runs_test(sequence):
-    """
-    Perform a runs test on a sequence of numbers.
-
-    The runs test is a statistical test that checks if the numbers in the sequence are randomly distributed.
-
-    Parameters:
-    sequence (list): The sequence of numbers to test.
-
-    Returns:
-    dict: A dictionary containing the V statistic, the critical value, whether to reject the null hypothesis, the observed counts, the expected means, and the covariance matrix.
-    """
-    runs = calculate_runs(sequence)
     n = len(sequence)
-    V, observed_counts, expected_means, covariance_matrix = compute_statistics(runs, n)
+    k = 10 ** m
+    m = 5
+    count = [0] * k
 
-    # Degrees of freedom
-    degrees_of_freedom = 6
+    for i in range(0, n, m):
+        number = 0
+        for j in range(m):
+            number += sequence[i + j] * 10 ** (m - j - 1)
+        count[number] += 1
 
-    # Critical value
+    expected = n / k
+    chi_square_statistic = sum((count[i] - expected) ** 2 / expected for i in range(k))
+
+    degrees_of_freedom = k - 1
     critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
-
-    # Compare V statistic with critical value
-    reject_null = V < critical_value
+    reject_null = chi_square_statistic > critical_value
 
     return {
-        "V_statistic": V,
+        "observed_counts": count,
+        "expected_counts": [expected] * k,
+        "chi_square_statistic": chi_square_statistic,
         "critical_value": critical_value,
-        "reject_null": reject_null,
-        "observed_counts": observed_counts,
-        "expected_means": expected_means,
-        "covariance_matrix": covariance_matrix
+        "reject_null": reject_null
     }
+
 
 def chisquare_test(sequence, expected_probs=None):
     """
