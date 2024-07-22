@@ -1,9 +1,9 @@
-import json
 import random
 from collections import Counter
 
 import numpy as np
 from scipy.stats import chi2
+import custom_generator
 
 
 # This function reads a file containing the decimals of pi and returns them as a list of integers.
