@@ -248,13 +248,13 @@ def chisquare_test(sequence, expected_probs=None):
     chi_square_statistic = sum((observed_counts[key] - expected_counts[key]) ** 2 / expected_counts[key] for key in observed_counts.keys())
 
     # Calculate the degrees of freedom
-    degrees_of_freedom = k - 1
+    degrees_of_freedom = len(expected_counts) - 1
 
     # Calculate the critical value
     critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
 
     # Determine whether to reject the null hypothesis
-    reject_null = chi_square_statistic < critical_value
+    reject_null = chi_square_statistic > critical_value
 
     return {
         "observed_counts": observed_counts,
@@ -312,7 +312,7 @@ def python_generator_test():
 
     # Perform a gap test on the generated random numbers
     # The gap test checks if the numbers in the sequence are uniformly distributed
-    result = gap_test(random_numbers, 0.2, 0.5, 5, 1000)
+    result = gap_test(random_numbers, 0, 0.5, 5, 1000)
 
     with open("python_generator_test_results.txt", "w") as f:
         f.write(f"----------- Gap test -----------\n")
