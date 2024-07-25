@@ -1,6 +1,7 @@
 import json
 import random
 from collections import Counter
+import math
 
 import numpy as np
 from scipy.stats import chi2
@@ -192,33 +193,86 @@ def compute_statistics(runs, n):
 
     return V, count, means, a_matrix
 
+# Fonction pour déterminer la catégorie de poker
+def poker_category(rolls):
+    counts = Counter(rolls).values()
+    count_values = sorted(counts, reverse=True)
+    if count_values[0] == 5:
+        return "Poker"
+    elif count_values[0] == 4:
+        return "Carré"
+    elif count_values[0] == 3 and count_values[1] == 2:
+        return "Full"
+    elif count_values[0] == 3:
+        return "Brelan"
+    elif count_values[0] == 2 and count_values[1] == 2:
+        return "Double paire"
+    elif count_values[0] == 2:
+        return "Paire"
+    else:
+        return "Rien"
+
+        '''
+        "Poker": (10 * math.comb(4, 4)) / (10**m),
+        "Carré": (10 * 9 * math.comb(4, 4)) / (10**m),
+        "Full": (10 * 9 * math.comb(3, 3)) / (10**m),
+        "Brelan": (10 * 9 * 8 * math.comb(3, 3)) / (10**m),
+        "Double Paire": (math.comb(10, 2) * 8 * math.comb(2, 2)) / (10**m),
+        "Paire": (math.comb(10, 1) * math.comb(9, 4) * math.comb(2, 2)) / (10**m),
+        "Rien": (math.comb(10, 5) * math.factorial(5) / (10**m))
+        '''
+def calculate_probabilities(n, m):
+    prob = {
+        "Poker": 0.0001,
+        "Carré": 0.0045,
+        "Full": 0.009,
+        "Brelan": 0.072,
+        "Double Paire": 0.108,
+        "Paire": 0.504,
+        "Rien": 0.3024
+}
+
+    return {k: p * n for k, p in prob.items()}
+
+#calculer la proba d'avoir n case differente
 def poker_test(sequence, m):
 
-    n = len(sequence)
-    k = 10 ** m
-    m = 5
-    count = [0] * k
+    # Calculate the observed counts
+    categories = [poker_category(digits[2:]) for digits in sequence]
+    observed = Counter(categories)
 
-    for i in range(0, n, m):
-        number = 0
-        for j in range(m):
-            number += sequence[i + j] * 10 ** (m - j - 1)
-        count[number] += 1
+    observed_counts = {cat: observed[cat] for cat in observed}
 
-    expected = n / k
-    chi_square_statistic = sum((count[i] - expected) ** 2 / expected for i in range(k))
+    # Calculate the expected probabilities
+    expected_counts = calculate_probabilities(len(sequence), m)
 
-    degrees_of_freedom = k - 1
-    critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
-    reject_null = chi_square_statistic > critical_value
+    # Associer les probabilités aux catégories
+    categories = ["Poker", "Carré ou Full", "Brelan ou Double Paire", "Paire", "Rien"]
+    probs_dict = {category: prob for category, prob in zip(categories, expected_counts)}
 
-    return {
-        "observed_counts": count,
-        "expected_counts": [expected] * k,
-        "chi_square_statistic": chi_square_statistic,
-        "critical_value": critical_value,
-        "reject_null": reject_null
-    }
+    # Combinaison des comptes Carré et Full
+    observed_counts['Carré ou Full'] = observed_counts.pop('Carré') + observed_counts.pop('Full')
+    expected_counts['Carré ou Full'] = expected_counts.pop('Carré') + expected_counts.pop('Full')
+
+    # Combinaison des comptes Brelan et Double Paire
+    observed_counts['Brelan ou Double Paire'] = observed_counts.pop('Brelan') + observed_counts.pop('Double paire')
+    expected_counts['Brelan ou Double Paire'] = expected_counts.pop('Brelan') + expected_counts.pop('Double Paire')
+
+    observed_counts = dict(sorted(observed_counts.items()))
+    expected_counts = dict(sorted(expected_counts.items()))
+
+
+    chi2_stat = sum((observed_counts.get(cat, 0) - expected_counts.get(cat, 0)) ** 2 / expected_counts.get(cat, 0) for cat in expected_counts)
+    df = len(expected_counts) - 1
+    chi2_critical = chi2.ppf(1 - 0.1, df)
+    reject_null = chi2_stat > chi2_critical
+
+    print(f"Observed counts: {observed_counts}")
+    print(f"Expected counts: {expected_counts}")
+    print(f"Chi-square statistic: {chi2_stat}")
+    print(f"Critical value: {chi2_critical}")
+    print(f"Reject null hypothesis: {reject_null}")
+    print(f"Uniform generator : {chi2_stat < chi2_critical}")
 
 
 def chisquare_test(sequence, expected_probs=None):
@@ -258,7 +312,7 @@ def chisquare_test(sequence, expected_probs=None):
     critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
 
     # Determine whether to reject the null hypothesis
-    reject_null = chi_square_statistic > critical_value
+    reject_null = chi_square_statistic < critical_value
 
     return {
         "observed_counts": observed_counts,
@@ -287,7 +341,7 @@ def custom_generator_test(pi_decimals):
 
     # Perform a runs test on the generated random numbers
     # The runs test checks if the numbers in the sequence are randomly distributed
-    result = runs_test([next(random_number_generator) for _ in range(1000)])
+    #result = runs_test([next(random_number_generator) for _ in range(1000)])
 
     with open("custom_generator_test_results.txt", "a") as f:
         f.write(f"----------- Runs test -----------\n")
@@ -394,11 +448,17 @@ if __name__ == "__main__":
     # Get the decimals of pi from a file
     pi_decimals = get_pi_decimals("pi_decimals_single_line.txt")
 
-    custom_generator_test(pi_decimals)
+    #custom_generator_test(pi_decimals)
 
-    python_generator_test()
+    #python_generator_test()
 
-    pi_decimals_test(pi_decimals)
+    #pi_decimals_test(pi_decimals)
+
+    # Perform a poker test on the decimals of pi
+    nombres = [random.uniform(0, 1) for _ in range(100000)]
+    for i in range(len(nombres)):
+        nombres[i] = format(nombres[i], '.5f')
+    poker_test(nombres, 5)
 
 
 
