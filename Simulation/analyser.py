@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 from scipy.stats import chi2
-import custom_generator
+from custom_generator import Generator
 
 
 # This function reads a file containing the decimals of pi and returns them as a list of integers.
@@ -183,12 +183,25 @@ def poker_test(sequence):
 
     # Associer les probabilités aux catégories
     categories = ["Poker", "Carré ou Full", "Brelan ou Double Paire", "Paire", "Rien"]
-
     # Combinaison des comptes Carré et Full
-    observed_counts['Carré ou Full'] = observed_counts.pop('Carré') + observed_counts.pop('Full')
+    if 'Carré' in observed_counts and 'Full' in observed_counts:
+        observed_counts['Carré ou Full'] = observed_counts.pop('Carré') + observed_counts.pop('Full')
+    else:
+        observed_counts['Carré ou Full'] = 0
+        if 'Carré' in observed_counts:
+            observed_counts['Carré ou Full'] += observed_counts.pop('Carré')
+        if 'Full' in observed_counts:
+            observed_counts['Carré ou Full'] += observed_counts.pop('Full')
 
     # Combinaison des comptes Brelan et Double Paire
-    observed_counts['Brelan ou Double Paire'] = observed_counts.pop('Brelan') + observed_counts.pop('Double paire')
+    if 'Brelan' in observed_counts and 'Double paire' in observed_counts:
+        observed_counts['Brelan ou Double Paire'] = observed_counts.pop('Brelan') + observed_counts.pop('Double paire')
+    else:
+        observed_counts['Brelan ou Double Paire'] = 0
+        if 'Brelan' in observed_counts:
+            observed_counts['Brelan ou Double Paire'] += observed_counts.pop('Brelan')
+        if 'Double paire' in observed_counts:
+            observed_counts['Brelan ou Double Paire'] += observed_counts.pop('Double paire')
 
     observed_counts = dict(sorted(observed_counts.items()))
     expected_counts = dict(sorted(expected_counts.items()))
@@ -199,14 +212,6 @@ def poker_test(sequence):
     chi2_critical = chi2.ppf(1 - 0.025, df)
     reject_null = chi2_stat > chi2_critical
 
-    '''
-    print(f"Observed counts: {observed_counts}")
-    print(f"Expected counts: {expected_counts}")
-    print(f"Chi-square statistic: {chi2_stat}")
-    print(f"Critical value: {chi2_critical}")
-    print(f"Reject null hypothesis: {reject_null}")
-    print(f"Uniform generator : {chi2_stat < chi2_critical}")
-    '''
     return {
         "observed_counts": observed_counts,
         "expected_counts": expected_counts,
@@ -239,17 +244,23 @@ def chi2_test(sequence):
         "reject_null": reject_null
     }
 
-def custom_generator_test(pi_decimals):
+def custom_generator_test(pi_decimals, sequence_length):
     # Generate random numbers based on the decimals of pi
-    random_number_generator = generate_random_numbers(pi_decimals, 6)
+    generator = Generator(pi_decimals=[int(digit) for digit in pi_decimals])
+    random_number = [generator.uniform(0, 1) for _ in range(sequence_length)]
+
+    #keep only five decimals
+    for i in range(len(random_number)):
+        random_number[i] = format(random_number[i], '.5f')
+        random_number[i] = float(random_number[i])
 
     # Perform a gap test on the generated random numbers
     # The gap test checks if the numbers in the sequence are uniformly distributed
-    result = gap_test([next(random_number_generator) for _ in range(1000)], 0.2, 0.5, 5, 1000)
+    result = gap_test(random_number, 0.2, 0.5, 5, 1000)
 
     # Write the result to a file
     with open("custom_generator_test_results.txt", "w") as f:
-        f.write(f"----------- Gap test -----------\n")
+        f.write(f"----------- Gap test ----eae-------\n")
         f.write(f"Observed counts: {result['observed_counts']}\n")
         f.write(f"Expected counts: {result['expected_counts']}\n")
         f.write(f"Chi-square statistic: {result['chi_square_statistic']}\n")
@@ -258,7 +269,7 @@ def custom_generator_test(pi_decimals):
 
     # Perform a runs test on the generated random numbers
     # The runs test checks if the numbers in the sequence are randomly distributed
-    result = poker_test([next(random_number_generator) for _ in range(1000)])
+    result = poker_test(random_number)
 
     with open("custom_generator_test_results.txt", "a") as f:
         f.write(f"----------- Poker test -----------\n")
@@ -271,7 +282,7 @@ def custom_generator_test(pi_decimals):
 
     # Perform a Chi-Square test on the generated random numbers
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
-    result = chi2_test([next(random_number_generator) for _ in range(1000)])
+    result = chi2_test(random_number)
 
     with open("custom_generator_test_results.txt", "a") as f:
         f.write(f"----------- Chi-Square test -----------\n")
@@ -282,9 +293,9 @@ def custom_generator_test(pi_decimals):
         f.write(f"Reject null hypothesis: {result['reject_null']}\n")
 
 
-def python_generator_test():
+def python_generator_test(sequence_length):
     # Generate random numbers using the Python random module
-    random_numbers = [random.uniform(0, 1) for _ in range(1000)]
+    random_numbers = [random.uniform(0, 1) for _ in range(sequence_length)]
 
     # Perform a gap test on the generated random numbers
     # The gap test checks if the numbers in the sequence are uniformly distributed
@@ -324,7 +335,7 @@ def python_generator_test():
         f.write(f"Reject null hypothesis: {result['reject_null']}\n")
 
 
-def pi_decimals_test(pi_decimals):
+def pi_decimals_test(pi_decimals, sequence_length):
     # Perform a gap test on the decimals of pi
     # The gap test checks if the numbers in the sequence are uniformly distributed
     result = gap_test([int(digit) for digit in pi_decimals], 0, 9, 5, 1000)
@@ -368,9 +379,11 @@ if __name__ == "__main__":
     # Get the decimals of pi from a file
     pi_decimals = get_pi_decimals("pi_decimals_single_line.txt")
 
-    custom_generator_test(pi_decimals)
+    sequence_length = 1000
 
-    python_generator_test()
+    custom_generator_test(pi_decimals,sequence_length)
+
+    python_generator_test(sequence_length)
 
     #pi_decimals_test(pi_decimals)
 
