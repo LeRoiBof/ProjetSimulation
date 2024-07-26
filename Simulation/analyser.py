@@ -196,7 +196,7 @@ def poker_test(sequence):
 
     chi2_stat = sum((observed_counts.get(cat, 0) - expected_counts.get(cat, 0)) ** 2 / expected_counts.get(cat, 0) for cat in expected_counts)
     df = len(expected_counts) - 1
-    chi2_critical = chi2.ppf(1 - 0.001, df)
+    chi2_critical = chi2.ppf(1 - 0.025, df)
     reject_null = chi2_stat > chi2_critical
 
     '''
@@ -216,51 +216,26 @@ def poker_test(sequence):
         "Uniform generator": chi2_stat < chi2_critical
     }
 
+def chi2_test(sequence):
+    intervals = np.linspace(0, 1, 11)
 
-def chisquare_test(sequence, expected_probs=None):
-    """
-    Perform a Chi-Square test on a sequence of numbers.
+    observed_frequencies, _ = np.histogram(sequence, bins=intervals)
 
-    The Chi-Square test is a statistical test that checks if the observed counts of numbers in the sequence
-    are significantly different from the expected counts.
+    expected_frequencies = np.ones(len(observed_frequencies)) * len(sequence) / len(observed_frequencies)
 
-    Parameters:
-    sequence (list): The sequence of numbers to test.
+    chi2_stat = np.sum((observed_frequencies - expected_frequencies) ** 2 / expected_frequencies)
 
-    Returns:
-    dict: A dictionary containing the observed counts, expected counts, Chi-Square statistic, critical value,
-    and whether to reject the null hypothesis.
-    """
-    # Count the occurrence of each number in the sequence
-    observed_counts = Counter(sequence)
-    n = len(sequence)
-    k = len(observed_counts)
+    df = len(observed_frequencies) - 1
 
-    # If expected_probs is not provided, assume a uniform distribution
-    if expected_probs is None:
-        unique_values = observed_counts.keys()
-        expected_probs = {key: 1 / len(unique_values) for key in unique_values}
+    chi2_critical = chi2.ppf(1 - 0.025, df)
 
-    # Calculate the expected counts for each number
-    expected_counts = {key: n * expected_probs[key] for key in observed_counts.keys()}
-
-    # Calculate the Chi-Square statistic
-    chi_square_statistic = sum((observed_counts[key] - expected_counts[key]) ** 2 / expected_counts[key] for key in observed_counts.keys())
-
-    # Calculate the degrees of freedom
-    degrees_of_freedom = len(expected_counts) - 1
-
-    # Calculate the critical value
-    critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
-
-    # Determine whether to reject the null hypothesis
-    reject_null = chi_square_statistic > critical_value
+    reject_null = chi2_stat > chi2_critical
 
     return {
-        "observed_counts": observed_counts,
-        "expected_counts": expected_counts,
-        "chi_square_statistic": chi_square_statistic,
-        "critical_value": critical_value,
+        "observed_counts": observed_frequencies,
+        "expected_counts": expected_frequencies,
+        "chi_square_statistic": chi2_stat,
+        "critical_value": chi2_critical,
         "reject_null": reject_null
     }
 
@@ -283,19 +258,20 @@ def custom_generator_test(pi_decimals):
 
     # Perform a runs test on the generated random numbers
     # The runs test checks if the numbers in the sequence are randomly distributed
-    #result = runs_test([next(random_number_generator) for _ in range(1000)])
+    result = poker_test([next(random_number_generator) for _ in range(1000)])
 
     with open("custom_generator_test_results.txt", "a") as f:
-        f.write(f"----------- Runs test -----------\n")
-        f.write(f"V statistic: {result['V_statistic']}\n")
-        f.write(f"Critical value: {result['critical_value']}\n")
-        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
-        f.write(f"Observed counts: {result['observed_counts']}\n")
-        f.write(f"Expected means: {result['expected_means']}\n")
+        f.write(f"----------- Poker test -----------\n")
+        f.write(f"Observed Counts: {result['observed_counts']}\n")
+        f.write(f"Expected Counts: {result['expected_counts']}\n")
+        f.write(f"Chi2 Statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical Value: {result['critical_value']}\n")
+        f.write(f"Reject Null Hypothesis: {result['reject_null']}\n")
+        f.write(f"Uniform generator : {result['Uniform generator']}\n")
 
     # Perform a Chi-Square test on the generated random numbers
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
-    result = chisquare_test([next(random_number_generator) for _ in range(1000)])
+    result = chi2_test([next(random_number_generator) for _ in range(1000)])
 
     with open("custom_generator_test_results.txt", "a") as f:
         f.write(f"----------- Chi-Square test -----------\n")
@@ -337,7 +313,7 @@ def python_generator_test():
 
     # Perform a Chi-Square test on the generated random numbers
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
-    result = chisquare_test(random_numbers)
+    result = chi2_test(random_numbers)
 
     with open("python_generator_test_results.txt", "a") as f:
         f.write(f"----------- Chi-Square test -----------\n")
@@ -363,19 +339,20 @@ def pi_decimals_test(pi_decimals):
 
     # Perform a runs test on the decimals of pi
     # The runs test checks if the numbers in the sequence are randomly distributed
-    result = runs_test([int(digit) for digit in pi_decimals])
+    result = poker_test([int(digit) for digit in pi_decimals])
 
     with open("pi_decimals_test_results.txt", "a") as f:
-        f.write(f"----------- Runs test -----------\n")
-        f.write(f"V statistic: {result['V_statistic']}\n")
-        f.write(f"Critical value: {result['critical_value']}\n")
-        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
-        f.write(f"Observed counts: {result['observed_counts']}\n")
-        f.write(f"Expected means: {result['expected_means']}\n")
+        f.write(f"----------- Poker test -----------\n")
+        f.write(f"Observed Counts: {result['observed_counts']}\n")
+        f.write(f"Expected Counts: {result['expected_counts']}\n")
+        f.write(f"Chi2 Statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical Value: {result['critical_value']}\n")
+        f.write(f"Reject Null Hypothesis: {result['reject_null']}\n")
+        f.write(f"Uniform generator : {result['Uniform generator']}\n")
 
     # Perform a Chi-Square test on the decimals of pi
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
-    result = chisquare_test([int(digit) for digit in pi_decimals])
+    result = chi2_test([int(digit) for digit in pi_decimals])
 
     with open("pi_decimals_test_results.txt", "a") as f:
         f.write(f"----------- Chi-Square test -----------\n")
@@ -391,7 +368,7 @@ if __name__ == "__main__":
     # Get the decimals of pi from a file
     pi_decimals = get_pi_decimals("pi_decimals_single_line.txt")
 
-    #custom_generator_test(pi_decimals)
+    custom_generator_test(pi_decimals)
 
     python_generator_test()
 
