@@ -20,7 +20,7 @@ class Generator:
         self.pi_index = seed % len(self.pi_decimals)
 
     def random(self):
-        print(f"pi_index: {self.pi_index}")
+        #print(f"pi_index: {self.pi_index}")
         x = self.pi_decimals[self.pi_index]
         x = (x * self.multiplier + self.increment) % self.modulus
         self.pi_index = random.randint(0, len(self.pi_decimals) - 1)
@@ -37,9 +37,11 @@ def get_pi_decimals(file):
         pi_decimals = f.read().strip()
     return pi_decimals
 
-decimals = get_pi_decimals("pi_decimals_single_line.txt")
 
-generator = Generator(pi_decimals=[int(digit) for digit in decimals])
+if __name__ == "__main__":
+    decimals = get_pi_decimals("pi_decimals_single_line.txt")
 
-for _ in range(100):
-    print(generator.uniform(0, 1))
+    generator = Generator(pi_decimals=[int(digit) for digit in decimals])
+
+    #for _ in range(100):
+    #    print(generator.uniform(0, 1))
