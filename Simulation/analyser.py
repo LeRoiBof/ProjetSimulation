@@ -121,7 +121,7 @@ def poker_category(rolls):
     else:
         return "Rien"
 
-def stirling_number(n,k):
+def stirling_number(n, k):
     if n == k == 0:
         return 1
     if n == 0 or k == 0:
@@ -373,12 +373,6 @@ if __name__ == "__main__":
     python_generator_test()
 
     #pi_decimals_test(pi_decimals)
-
-    # Perform a poker test on the decimals of pi
-    #nombres = [random.uniform(0, 1) for _ in range(1000)]
-    #for i in range(len(nombres)):
-    #    nombres[i] = format(nombres[i], '.5f')
-    #poker_test(nombres)
 
 
 
