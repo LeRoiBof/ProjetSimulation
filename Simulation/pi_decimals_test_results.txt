@@ -1,19 +1,6 @@
 ----------- Gap test -----------
 Observed counts: [894  97   8   0   0   1]
 Expected counts: [     9000    -72000    576000  -4608000  36864000 -32768000]
-Chi-square statistic: -3241.4954583638505
+Chi-square statistic: -911.3265694752336
 Critical value: 11.070497693516351
-Reject null hypothesis: True
------------ Runs test -----------
-V statistic: 1913079546.3213382
-Critical value: 12.591587243743977
-Reject null hypothesis: False
-Observed counts: [0, 396627, 207347, 48196, 7408, 828, 66]
-Expected means: [166666.66666667 208333.33333333  91666.66666667  26388.88888889
-   5753.96825397   1190.47619048]
------------ Chi-Square test -----------
-Observed counts: Counter({5: 100359, 4: 100230, 3: 100229, 9: 100106, 2: 100026, 8: 99985, 0: 99959, 7: 99800, 1: 99758, 6: 99548})
-Expected counts: {1: 100000.0, 4: 100000.0, 5: 100000.0, 9: 100000.0, 2: 100000.0, 6: 100000.0, 3: 100000.0, 8: 100000.0, 7: 100000.0, 0: 100000.0}
-Chi-square statistic: 5.50908
-Critical value: 16.918977604620448
 Reject null hypothesis: False

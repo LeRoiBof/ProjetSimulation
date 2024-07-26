@@ -1,5 +1,6 @@
 import random
 from collections import Counter
+import math
 
 import numpy as np
 from scipy.stats import chi2
@@ -101,176 +102,140 @@ def gap_test(sequence, alpha, beta, t, n):
         "reject_null": reject_null
     }
 
+# Fonction pour déterminer la catégorie de poker
+def poker_category(rolls):
+    counts = Counter(rolls).values()
+    count_values = sorted(counts, reverse=True)
+    if count_values[0] == 5:
+        return "Poker"
+    elif count_values[0] == 4:
+        return "Carré"
+    elif count_values[0] == 3 and count_values[1] == 2:
+        return "Full"
+    elif count_values[0] == 3:
+        return "Brelan"
+    elif count_values[0] == 2 and count_values[1] == 2:
+        return "Double paire"
+    elif count_values[0] == 2:
+        return "Paire"
+    else:
+        return "Rien"
 
-def calculate_runs(sequence):
-    """
-    Calculate the runs in a sequence.
+def stirling_number(n, k):
+    if n == k == 0:
+        return 1
+    if n == 0 or k == 0:
+        return 0
+    return k * stirling_number(n-1, k) + stirling_number(n-1, k-1)
 
-    A run is defined as a sequence of increasing or decreasing numbers. The function calculates the length of each run.
+def poker_probabilities(k, d):
+    probabilities = []
+    for r in range(1, k+1):
+        S = stirling_number(k, r)
+        assignments = math.factorial(d) // math.factorial(d-r)
+        Pr = S * assignments / (d ** k)
+        probabilities.append(Pr)
+    return probabilities
 
-    Parameters:
-    sequence (list): The sequence of numbers to calculate runs for.
+def calculate_probabilities(n, m):
+    '''
 
-    Returns:
-    list: A list of run lengths.
-    """
-    runs = []
-    run_length = 1
-    increasing = None
+    :param n: quantity of numbers by set
+    :param m: number of digits after the decimal point
+    :return:
+    '''
 
-    for i in range(1, len(sequence)):
-        if sequence[i] > sequence[i - 1]:
-            if increasing is None or increasing:
-                run_length += 1
-                increasing = True
-            else:
-                runs.append(run_length)
-                run_length = 1
-                increasing = True
-        elif sequence[i] < sequence[i - 1]:
-            if increasing is None or not increasing:
-                run_length += 1
-                increasing = False
-            else:
-                runs.append(run_length)
-                run_length = 1
-                increasing = False
-        else:
-            if increasing is not None:
-                runs.append(run_length)
-                run_length = 1
-                increasing = None
+    d = 10
 
-    runs.append(run_length)
-    return runs
+    # Probabilités des différentes configurations
+    P_poker, P_full_carre, P_brelan_double_paire, P_paire, P_rien = poker_probabilities(m, d)
 
-
-def compute_statistics(runs, n):
-    """
-    Compute the statistics for the runs test.
-
-    The function calculates the V statistic, which is used in the runs test.
-
-    Parameters:
-    runs (list): The list of run lengths.
-    n (int): The total number of runs.
-
-    Returns:
-    tuple: A tuple containing the V statistic, the observed counts, the expected means, and the covariance matrix.
-    """
-    t = 6
-    count = [0] * (t + 1)
-
-    for run in runs:
-        if run >= t:
-            count[t] += 1
-        else:
-            count[run] += 1
-
-    # Coefficients (approximate values from provided matrix)
-    a_matrix = np.array([
-        [4529.4, 9044.9, 13568, 18091, 22615, 27892],
-        [9044.9, 18097, 27139, 36187, 45234, 55789],
-        [13568, 27139, 40721, 54281, 67852, 83685],
-        [18091, 36187, 54281, 72414, 90470, 111580],
-        [22615, 45234, 67852, 90470, 113262, 139476],
-        [27892, 55789, 83685, 111580, 139476, 172860]
-    ])
-
-    b_vector = np.array([1/6, 5/24, 11/120, 19/720, 29/5040, 1/840])
-
-    # Compute mean values
-    means = np.array([n * b for b in b_vector])
-
-    # Compute V statistic
-    V = 0
-    for i in range(t):
-        for j in range(t):
-            V += (count[i] - means[i]) * (count[j] - means[j]) * a_matrix[i, j]
-
-    V /= (n - 6)
-
-    return V, count, means, a_matrix
-
-
-def runs_test(sequence):
-    """
-    Perform a runs test on a sequence of numbers.
-
-    The runs test is a statistical test that checks if the numbers in the sequence are randomly distributed.
-
-    Parameters:
-    sequence (list): The sequence of numbers to test.
-
-    Returns:
-    dict: A dictionary containing the V statistic, the critical value, whether to reject the null hypothesis, the observed counts, the expected means, and the covariance matrix.
-    """
-    runs = calculate_runs(sequence)
-    n = len(sequence)
-    V, observed_counts, expected_means, covariance_matrix = compute_statistics(runs, n)
-
-    # Degrees of freedom
-    degrees_of_freedom = 6
-
-    # Critical value
-    critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
-
-    # Compare V statistic with critical value
-    reject_null = V < critical_value
-
-    return {
-        "V_statistic": V,
-        "critical_value": critical_value,
-        "reject_null": reject_null,
-        "observed_counts": observed_counts,
-        "expected_means": expected_means,
-        "covariance_matrix": covariance_matrix
+    prob = {
+        "Poker": P_poker,
+        "Carré ou Full": P_full_carre,
+        "Brelan ou Double Paire": P_brelan_double_paire,
+        "Paire": P_paire,
+        "Rien": P_rien
     }
 
-def chisquare_test(sequence, expected_probs=None):
-    """
-    Perform a Chi-Square test on a sequence of numbers.
+    return {k: p * n for k, p in prob.items()}
 
-    The Chi-Square test is a statistical test that checks if the observed counts of numbers in the sequence
-    are significantly different from the expected counts.
+#calculer la proba d'avoir n case differente
+def poker_test(sequence):
+    '''
 
-    Parameters:
-    sequence (list): The sequence of numbers to test.
+    :param sequence: list of numbers
+    :param m: number of digits after the decimal point
+    :return:
+    '''
+    if(type(sequence[0]) == float):
+        for i in range(len(sequence)):
+            sequence[i] = format(sequence[i], '.5f')
+    # Calculate the observed counts
+    m = len(sequence[0][2:])
+    categories = [poker_category(digits[2:]) for digits in sequence]
+    observed = Counter(categories)
 
-    Returns:
-    dict: A dictionary containing the observed counts, expected counts, Chi-Square statistic, critical value,
-    and whether to reject the null hypothesis.
-    """
-    # Count the occurrence of each number in the sequence
-    observed_counts = Counter(sequence)
-    n = len(sequence)
-    k = len(observed_counts)
+    observed_counts = {cat: observed[cat] for cat in observed}
 
-    # If expected_probs is not provided, assume a uniform distribution
-    if expected_probs is None:
-        unique_values = observed_counts.keys()
-        expected_probs = {key: 1 / len(unique_values) for key in unique_values}
+    # Calculate the expected probabilities
+    expected_counts = calculate_probabilities(len(sequence), m)
 
-    # Calculate the expected counts for each number
-    expected_counts = {key: n * expected_probs[key] for key in observed_counts.keys()}
+    # Associer les probabilités aux catégories
+    categories = ["Poker", "Carré ou Full", "Brelan ou Double Paire", "Paire", "Rien"]
 
-    # Calculate the Chi-Square statistic
-    chi_square_statistic = sum((observed_counts[key] - expected_counts[key]) ** 2 / expected_counts[key] for key in observed_counts.keys())
+    # Combinaison des comptes Carré et Full
+    observed_counts['Carré ou Full'] = observed_counts.pop('Carré') + observed_counts.pop('Full')
 
-    # Calculate the degrees of freedom
-    degrees_of_freedom = k - 1
+    # Combinaison des comptes Brelan et Double Paire
+    observed_counts['Brelan ou Double Paire'] = observed_counts.pop('Brelan') + observed_counts.pop('Double paire')
 
-    # Calculate the critical value
-    critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
+    observed_counts = dict(sorted(observed_counts.items()))
+    expected_counts = dict(sorted(expected_counts.items()))
 
-    # Determine whether to reject the null hypothesis
-    reject_null = chi_square_statistic > critical_value
 
+    chi2_stat = sum((observed_counts.get(cat, 0) - expected_counts.get(cat, 0)) ** 2 / expected_counts.get(cat, 0) for cat in expected_counts)
+    df = len(expected_counts) - 1
+    chi2_critical = chi2.ppf(1 - 0.025, df)
+    reject_null = chi2_stat > chi2_critical
+
+    '''
+    print(f"Observed counts: {observed_counts}")
+    print(f"Expected counts: {expected_counts}")
+    print(f"Chi-square statistic: {chi2_stat}")
+    print(f"Critical value: {chi2_critical}")
+    print(f"Reject null hypothesis: {reject_null}")
+    print(f"Uniform generator : {chi2_stat < chi2_critical}")
+    '''
     return {
         "observed_counts": observed_counts,
         "expected_counts": expected_counts,
-        "chi_square_statistic": chi_square_statistic,
-        "critical_value": critical_value,
+        "chi_square_statistic": chi2_stat,
+        "critical_value": chi2_critical,
+        "reject_null": reject_null,
+        "Uniform generator": chi2_stat < chi2_critical
+    }
+
+def chi2_test(sequence):
+    intervals = np.linspace(0, 1, 11)
+
+    observed_frequencies, _ = np.histogram(sequence, bins=intervals)
+
+    expected_frequencies = np.ones(len(observed_frequencies)) * len(sequence) / len(observed_frequencies)
+
+    chi2_stat = np.sum((observed_frequencies - expected_frequencies) ** 2 / expected_frequencies)
+
+    df = len(observed_frequencies) - 1
+
+    chi2_critical = chi2.ppf(1 - 0.025, df)
+
+    reject_null = chi2_stat > chi2_critical
+
+    return {
+        "observed_counts": observed_frequencies,
+        "expected_counts": expected_frequencies,
+        "chi_square_statistic": chi2_stat,
+        "critical_value": chi2_critical,
         "reject_null": reject_null
     }
 
@@ -293,19 +258,20 @@ def custom_generator_test(pi_decimals):
 
     # Perform a runs test on the generated random numbers
     # The runs test checks if the numbers in the sequence are randomly distributed
-    result = runs_test([next(random_number_generator) for _ in range(1000)])
+    result = poker_test([next(random_number_generator) for _ in range(1000)])
 
     with open("custom_generator_test_results.txt", "a") as f:
-        f.write(f"----------- Runs test -----------\n")
-        f.write(f"V statistic: {result['V_statistic']}\n")
-        f.write(f"Critical value: {result['critical_value']}\n")
-        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
-        f.write(f"Observed counts: {result['observed_counts']}\n")
-        f.write(f"Expected means: {result['expected_means']}\n")
+        f.write(f"----------- Poker test -----------\n")
+        f.write(f"Observed Counts: {result['observed_counts']}\n")
+        f.write(f"Expected Counts: {result['expected_counts']}\n")
+        f.write(f"Chi2 Statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical Value: {result['critical_value']}\n")
+        f.write(f"Reject Null Hypothesis: {result['reject_null']}\n")
+        f.write(f"Uniform generator : {result['Uniform generator']}\n")
 
     # Perform a Chi-Square test on the generated random numbers
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
-    result = chisquare_test([next(random_number_generator) for _ in range(1000)])
+    result = chi2_test([next(random_number_generator) for _ in range(1000)])
 
     with open("custom_generator_test_results.txt", "a") as f:
         f.write(f"----------- Chi-Square test -----------\n")
@@ -322,7 +288,7 @@ def python_generator_test():
 
     # Perform a gap test on the generated random numbers
     # The gap test checks if the numbers in the sequence are uniformly distributed
-    result = gap_test(random_numbers, 0.2, 0.5, 5, 1000)
+    result = gap_test(random_numbers, 0, 0.5, 5, 1000)
 
     with open("python_generator_test_results.txt", "w") as f:
         f.write(f"----------- Gap test -----------\n")
@@ -332,21 +298,22 @@ def python_generator_test():
         f.write(f"Critical value: {result['critical_value']}\n")
         f.write(f"Reject null hypothesis: {result['reject_null']}\n")
 
-    # Perform a runs test on the generated random numbers
-    # The runs test checks if the numbers in the sequence are randomly distributed
-    result = runs_test(random_numbers)
+    # Perform a poker test on the generated random numbers
+    # The poker test checks if the numbers in the sequence are randomly distributed
+    result = poker_test(random_numbers)
 
     with open("python_generator_test_results.txt", "a") as f:
-        f.write(f"----------- Runs test -----------\n")
-        f.write(f"V statistic: {result['V_statistic']}\n")
-        f.write(f"Critical value: {result['critical_value']}\n")
-        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
-        f.write(f"Observed counts: {result['observed_counts']}\n")
-        f.write(f"Expected means: {result['expected_means']}\n")
+        f.write(f"----------- Poker test -----------\n")
+        f.write(f"Observed Counts: {result['observed_counts']}\n")
+        f.write(f"Expected Counts: {result['expected_counts']}\n")
+        f.write(f"Chi2 Statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical Value: {result['critical_value']}\n")
+        f.write(f"Reject Null Hypothesis: {result['reject_null']}\n")
+        f.write(f"Uniform generator : {result['Uniform generator']}\n")
 
     # Perform a Chi-Square test on the generated random numbers
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
-    result = chisquare_test(random_numbers)
+    result = chi2_test(random_numbers)
 
     with open("python_generator_test_results.txt", "a") as f:
         f.write(f"----------- Chi-Square test -----------\n")
@@ -372,19 +339,20 @@ def pi_decimals_test(pi_decimals):
 
     # Perform a runs test on the decimals of pi
     # The runs test checks if the numbers in the sequence are randomly distributed
-    result = runs_test([int(digit) for digit in pi_decimals])
+    result = poker_test([int(digit) for digit in pi_decimals])
 
     with open("pi_decimals_test_results.txt", "a") as f:
-        f.write(f"----------- Runs test -----------\n")
-        f.write(f"V statistic: {result['V_statistic']}\n")
-        f.write(f"Critical value: {result['critical_value']}\n")
-        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
-        f.write(f"Observed counts: {result['observed_counts']}\n")
-        f.write(f"Expected means: {result['expected_means']}\n")
+        f.write(f"----------- Poker test -----------\n")
+        f.write(f"Observed Counts: {result['observed_counts']}\n")
+        f.write(f"Expected Counts: {result['expected_counts']}\n")
+        f.write(f"Chi2 Statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical Value: {result['critical_value']}\n")
+        f.write(f"Reject Null Hypothesis: {result['reject_null']}\n")
+        f.write(f"Uniform generator : {result['Uniform generator']}\n")
 
     # Perform a Chi-Square test on the decimals of pi
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
-    result = chisquare_test([int(digit) for digit in pi_decimals])
+    result = chi2_test([int(digit) for digit in pi_decimals])
 
     with open("pi_decimals_test_results.txt", "a") as f:
         f.write(f"----------- Chi-Square test -----------\n")
@@ -404,7 +372,7 @@ if __name__ == "__main__":
 
     python_generator_test()
 
-    pi_decimals_test(pi_decimals)
+    #pi_decimals_test(pi_decimals)
 
 
 
