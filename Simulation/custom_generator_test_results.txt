@@ -1,19 +1,19 @@
------------ Gap test -----------
-Observed counts: [788  73  47  25  21  46]
+----------- Gap test ----eae-------
+Observed counts: [801  60  35  33  24  47]
 Expected counts: [300.   210.   147.   102.9   72.03 168.07]
-Chi-square statistic: 1135.0030340532714
+Chi-square statistic: 1195.8692820451795
 Critical value: 11.070497693516351
 Reject null hypothesis: True
 ----------- Poker test -----------
-Observed Counts: {'Brelan ou Double Paire': 174, 'CarrÃ© ou Full': 15, 'Paire': 537, 'Rien': 274}
-Expected Counts: {'Brelan ou Double Paire': 180.0, 'CarrÃ© ou Full': 13.5, 'Paire': 504.0, 'Poker': 0.1, 'Rien': 302.4}
-Chi2 Statistic: 5.294576719576716
+Observed Counts: {'Brelan ou Double Paire': 189, 'Carré ou Full': 10, 'Paire': 492, 'Rien': 309}
+Expected Counts: {'Brelan ou Double Paire': 180.0, 'Carré ou Full': 13.5, 'Paire': 504.0, 'Poker': 0.1, 'Rien': 302.4}
+Chi2 Statistic: 1.8871693121693134
 Critical Value: 11.143286781877796
 Reject Null Hypothesis: False
 Uniform generator : True
 ----------- Chi-Square test -----------
-Observed counts: [ 95  97  86 102  92 105 102  89 117 115]
+Observed counts: [114  95  86 113  94  88 109 101 108  92]
 Expected counts: [100. 100. 100. 100. 100. 100. 100. 100. 100. 100.]
-Chi-square statistic: 9.620000000000001
+Chi-square statistic: 9.760000000000002
 Critical value: 19.02276779864163
 Reject null hypothesis: False

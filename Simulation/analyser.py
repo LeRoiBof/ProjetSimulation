@@ -4,7 +4,6 @@ import math
 
 import numpy as np
 from scipy.stats import chi2
-from custom_generator import Generator
 
 
 # This function reads a file containing the decimals of pi and returns them as a list of integers.
@@ -14,17 +13,34 @@ def get_pi_decimals(file):
     return pi_decimals
 
 
+def generate_lcg(seed, a=1664525, c=1013904223, m=2 ** 32):
+    state = seed
+    while True:
+        state = (a * state + c) % m
+        yield state / m
+
+
+def pi_based_lcg(pi_decimals, num_values):
+    # Extraire un entier comme graine à partir des décimales de π
+    seed = int(pi_decimals[:10])  # Utiliser les 10 premières décimales pour la graine
+    lcg = generate_lcg(seed)
+
+    # Produire num_values valeurs
+    for _ in range(num_values):
+        yield next(lcg)
+
 # This function generates random numbers based on the decimals of pi.
 # It yields a new random number each time it is called.
-def generate_random_numbers(pi_decimals, slice_size):
-    while True:
-        index = random.randint(0, len(pi_decimals) - 1)
-        if index + slice_size > len(pi_decimals):
-            index = 0
-        slice = pi_decimals[index:index + slice_size]
-        random_number = int(slice)
+def generate_uniform_random_numbers(pi_decimals):
+    # Extract an integer as a seed from the decimals of pi
+    seed = int(pi_decimals[:10])  # Use the first 10 decimals for the seed
 
-        yield random_number / 10 ** slice_size
+    # Generate random numbers using a linear congruential generator
+    lcg = generate_lcg(seed)
+
+    # Generate an infinite sequence of random numbers
+    while True:
+        yield next(lcg)
 
 
 def gap_test(sequence, alpha, beta, t, n):
@@ -246,13 +262,9 @@ def chi2_test(sequence):
 
 def custom_generator_test(pi_decimals, sequence_length):
     # Generate random numbers based on the decimals of pi
-    generator = Generator(pi_decimals=[int(digit) for digit in pi_decimals])
-    random_number = [generator.uniform(0, 1) for _ in range(sequence_length)]
+    random_number_generator = generate_uniform_random_numbers(pi_decimals)
 
-    #keep only five decimals
-    for i in range(len(random_number)):
-        random_number[i] = format(random_number[i], '.5f')
-        random_number[i] = float(random_number[i])
+    random_number = [next(random_number_generator) for _ in range(sequence_length)]
 
     # Perform a gap test on the generated random numbers
     # The gap test checks if the numbers in the sequence are uniformly distributed
