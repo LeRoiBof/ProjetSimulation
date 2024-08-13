@@ -254,14 +254,14 @@ def custom_generator_test(pi_decimals, sequence_length, alpha):
 
     # Perform a gap test on the generated random numbers
     # The gap test checks if the numbers in the sequence are uniformly distributed
-    result = gap_test(random_number,alpha)
+    result = gap_test(random_number, alpha)
     # a = 0.1
     # b = 0.5
     # m = 5
 
     # Write the result to a file
     with open("custom_generator_test_results.txt", "w") as f:
-        f.write(f"----------- Gap test ----eae-------\n")
+        f.write(f"----------- Gap test -----------\n")
         f.write(f"Observed counts: {result['observed_counts']}\n")
         f.write(f"Expected counts: {result['expected_counts']}\n")
         f.write(f"Chi-square statistic: {result['chi_square_statistic']}\n")
@@ -279,7 +279,6 @@ def custom_generator_test(pi_decimals, sequence_length, alpha):
         f.write(f"Chi2 Statistic: {result['chi_square_statistic']}\n")
         f.write(f"Critical Value: {result['critical_value']}\n")
         f.write(f"Reject Null Hypothesis: {result['reject_null']}\n")
-        f.write(f"Uniform generator : {result['Uniform generator']}\n")
 
     # Perform a Chi-Square test on the generated random numbers
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
@@ -346,8 +345,6 @@ if __name__ == "__main__":
     custom_generator_test(pi_decimals, sequence_length, alpha)
 
     python_generator_test(sequence_length, alpha)
-
-    #pi_decimals_test(pi_decimals)
 
 
 
