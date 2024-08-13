@@ -43,78 +43,63 @@ def generate_uniform_random_numbers(pi_decimals):
         yield next(lcg)
 
 
-def gap_test(sequence, alpha, beta, t, n):
-    """
-    Perform a gap test on a sequence of numbers.
+def gap_test(sequence, alpha):
+    sequence_length = len(sequence)
+    m = 5
 
-    The gap test is a statistical test that checks if the numbers in the sequence are uniformly distributed.
+    # Intervalle [a, b]
+    a, b = 0.1, 0.5  # Travailler avec des valeurs normalisées entre 0 et 1
+    p = (b - a)  # Probabilité p de tomber dans [a, b]
 
-    Parameters:
-    sequence (list): The sequence of numbers to test.
-    alpha (float): The lower bound of the interval.
-    beta (float): The upper bound of the interval.
-    t (int): The maximum gap length to consider.
-    n (int): The number of gaps to consider.
+    # Conversion des valeurs dans l'intervalle [0, 1]
+    sequence = [float(f"0.{str(x)[2:]}") for x in sequence]
 
-    Returns:
-    dict: A dictionary containing the observed counts, expected counts, chi-square statistic, critical value, and whether to reject the null hypothesis.
-    """
-    # Initialize
-    count = [0] * (t + 1)
-    j = -1
-    s = 0
+    # Marquage des valeurs dans l'intervalle [a, b]
+    marqués = np.zeros(sequence_length, dtype=bool)
+    for i in range(sequence_length):
+        if a <= sequence[i] <= b:
+            marqués[i] = True
 
-    # Calculate p
-    p = beta - alpha
-
-    while s < n:
-        # Set T zero
-        r = 0
-        while True:
-            # Increase j
-            j += 1
-            if j >= len(sequence):
-                break
-
-            # Check if sequence[j] is in the range [alpha, beta)
-            if alpha <= sequence[j] < beta:
-                break
-            else:
-                # Increase r
-                r += 1
-
-        # Record gap length
-        if r >= t:
-            count[t] += 1
+    # Calcul des gaps
+    gaps = []
+    gap = 0
+    for marqué in marqués:
+        if marqué:
+            gaps.append(gap)
+            gap = 0
         else:
-            count[r] += 1
+            gap += 1
+    gaps.append(gap)  # Ajouter le dernier gap
 
-        # Increase s
-        s += 1
+    # Calcul des probabilités théoriques des gaps
+    max_gap = max(gaps)
+    probs_théoriques = [(1 - p) ** i * p for i in range(max_gap + 1)]
+    probs_théoriques.append((1 - p) ** (max_gap + 1))
 
-    # Calculate expected probabilities
-    expected = [p * (1 - p) ** i for i in range(t)]
-    expected.append((1 - p) ** t)
+    # Calcul des occurrences observées
+    occurrences = np.bincount(gaps)
 
-    # Calculate chi-square statistic
-    observed = np.array(count)
-    expected_counts = np.array(expected) * n
-    chi_square_statistic = np.sum((observed - expected_counts) ** 2 / expected_counts)
+    # Élargir la liste des occurrences si nécessaire
+    if len(occurrences) < len(probs_théoriques):
+        occurrences = np.append(occurrences, [0] * (len(probs_théoriques) - len(occurrences)))
 
-    # Degrees of freedom
-    degrees_of_freedom = t
+    # Nombre de gaps
+    N = len(gaps)
 
-    # Critical value
-    critical_value = chi2.ppf(1 - 0.05, degrees_of_freedom)
+    # Valeurs attendues
+    valeurs_attendues = [N * p for p in probs_théoriques]
 
-    # Compare chi-square statistic with critical value
-    reject_null = chi_square_statistic > critical_value
+    # Test du chi²
+    chi2_stat = np.sum((occurrences - valeurs_attendues) ** 2 / valeurs_attendues)
+    chi2_critical = chi2.ppf(1 - alpha, len(probs_théoriques) - 1)
+
+    reject_null = chi2_stat > chi2_critical
 
     return {
-        "observed_counts": observed,
-        "expected_counts": expected_counts,
-        "chi_square_statistic": chi_square_statistic,
-        "critical_value": critical_value,
+        "observed_counts": occurrences,
+        "expected_counts": valeurs_attendues,
+        "chi_square_statistic": chi2_stat,
+        "critical_value": chi2_critical,
         "reject_null": reject_null
     }
 
@@ -177,7 +162,7 @@ def calculate_probabilities(n, m):
     return {k: p * n for k, p in prob.items()}
 
 #calculer la proba d'avoir n case differente
-def poker_test(sequence):
+def poker_test(sequence, alpha):
     '''
 
     :param sequence: list of numbers
@@ -199,6 +184,7 @@ def poker_test(sequence):
 
     # Associer les probabilités aux catégories
     categories = ["Poker", "Carré ou Full", "Brelan ou Double Paire", "Paire", "Rien"]
+
     # Combinaison des comptes Carré et Full
     if 'Carré' in observed_counts and 'Full' in observed_counts:
         observed_counts['Carré ou Full'] = observed_counts.pop('Carré') + observed_counts.pop('Full')
@@ -225,7 +211,7 @@ def poker_test(sequence):
 
     chi2_stat = sum((observed_counts.get(cat, 0) - expected_counts.get(cat, 0)) ** 2 / expected_counts.get(cat, 0) for cat in expected_counts)
     df = len(expected_counts) - 1
-    chi2_critical = chi2.ppf(1 - 0.025, df)
+    chi2_critical = chi2.ppf(1 - alpha, df)
     reject_null = chi2_stat > chi2_critical
 
     return {
@@ -237,7 +223,7 @@ def poker_test(sequence):
         "Uniform generator": chi2_stat < chi2_critical
     }
 
-def chi2_test(sequence):
+def chi2_test(sequence, alpha):
     intervals = np.linspace(0, 1, 11)
 
     observed_frequencies, _ = np.histogram(sequence, bins=intervals)
@@ -248,7 +234,7 @@ def chi2_test(sequence):
 
     df = len(observed_frequencies) - 1
 
-    chi2_critical = chi2.ppf(1 - 0.025, df)
+    chi2_critical = chi2.ppf(1 - alpha, df)
 
     reject_null = chi2_stat > chi2_critical
 
@@ -260,7 +246,7 @@ def chi2_test(sequence):
         "reject_null": reject_null
     }
 
-def custom_generator_test(pi_decimals, sequence_length):
+def custom_generator_test(pi_decimals, sequence_length, alpha):
     # Generate random numbers based on the decimals of pi
     random_number_generator = generate_uniform_random_numbers(pi_decimals)
 
@@ -268,7 +254,10 @@ def custom_generator_test(pi_decimals, sequence_length):
 
     # Perform a gap test on the generated random numbers
     # The gap test checks if the numbers in the sequence are uniformly distributed
-    result = gap_test(random_number, 0.2, 0.5, 5, 1000)
+    result = gap_test(random_number,alpha)
+    # a = 0.1
+    # b = 0.5
+    # m = 5
 
     # Write the result to a file
     with open("custom_generator_test_results.txt", "w") as f:
@@ -281,7 +270,7 @@ def custom_generator_test(pi_decimals, sequence_length):
 
     # Perform a runs test on the generated random numbers
     # The runs test checks if the numbers in the sequence are randomly distributed
-    result = poker_test(random_number)
+    result = poker_test(random_number, alpha)
 
     with open("custom_generator_test_results.txt", "a") as f:
         f.write(f"----------- Poker test -----------\n")
@@ -294,7 +283,7 @@ def custom_generator_test(pi_decimals, sequence_length):
 
     # Perform a Chi-Square test on the generated random numbers
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
-    result = chi2_test(random_number)
+    result = chi2_test(random_number, alpha)
 
     with open("custom_generator_test_results.txt", "a") as f:
         f.write(f"----------- Chi-Square test -----------\n")
@@ -305,14 +294,13 @@ def custom_generator_test(pi_decimals, sequence_length):
         f.write(f"Reject null hypothesis: {result['reject_null']}\n")
 
 
-def python_generator_test(sequence_length):
+def python_generator_test(sequence_length, alpha):
     # Generate random numbers using the Python random module
     random_numbers = [random.uniform(0, 1) for _ in range(sequence_length)]
 
     # Perform a gap test on the generated random numbers
     # The gap test checks if the numbers in the sequence are uniformly distributed
-    result = gap_test(random_numbers, 0, 0.5, 5, 1000)
-
+    result = gap_test(random_numbers, alpha)
     with open("python_generator_test_results.txt", "w") as f:
         f.write(f"----------- Gap test -----------\n")
         f.write(f"Observed counts: {result['observed_counts']}\n")
@@ -323,7 +311,7 @@ def python_generator_test(sequence_length):
 
     # Perform a poker test on the generated random numbers
     # The poker test checks if the numbers in the sequence are randomly distributed
-    result = poker_test(random_numbers)
+    result = poker_test(random_numbers, alpha)
 
     with open("python_generator_test_results.txt", "a") as f:
         f.write(f"----------- Poker test -----------\n")
@@ -332,52 +320,12 @@ def python_generator_test(sequence_length):
         f.write(f"Chi2 Statistic: {result['chi_square_statistic']}\n")
         f.write(f"Critical Value: {result['critical_value']}\n")
         f.write(f"Reject Null Hypothesis: {result['reject_null']}\n")
-        f.write(f"Uniform generator : {result['Uniform generator']}\n")
 
     # Perform a Chi-Square test on the generated random numbers
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
-    result = chi2_test(random_numbers)
+    result = chi2_test(random_numbers,alpha)
 
     with open("python_generator_test_results.txt", "a") as f:
-        f.write(f"----------- Chi-Square test -----------\n")
-        f.write(f"Observed counts: {result['observed_counts']}\n")
-        f.write(f"Expected counts: {result['expected_counts']}\n")
-        f.write(f"Chi-square statistic: {result['chi_square_statistic']}\n")
-        f.write(f"Critical value: {result['critical_value']}\n")
-        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
-
-
-def pi_decimals_test(pi_decimals, sequence_length):
-    # Perform a gap test on the decimals of pi
-    # The gap test checks if the numbers in the sequence are uniformly distributed
-    result = gap_test([int(digit) for digit in pi_decimals], 0, 9, 5, 1000)
-
-    with open("pi_decimals_test_results.txt", "w") as f:
-        f.write(f"----------- Gap test -----------\n")
-        f.write(f"Observed counts: {result['observed_counts']}\n")
-        f.write(f"Expected counts: {result['expected_counts']}\n")
-        f.write(f"Chi-square statistic: {result['chi_square_statistic']}\n")
-        f.write(f"Critical value: {result['critical_value']}\n")
-        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
-
-    # Perform a runs test on the decimals of pi
-    # The runs test checks if the numbers in the sequence are randomly distributed
-    result = poker_test([int(digit) for digit in pi_decimals])
-
-    with open("pi_decimals_test_results.txt", "a") as f:
-        f.write(f"----------- Poker test -----------\n")
-        f.write(f"Observed Counts: {result['observed_counts']}\n")
-        f.write(f"Expected Counts: {result['expected_counts']}\n")
-        f.write(f"Chi2 Statistic: {result['chi_square_statistic']}\n")
-        f.write(f"Critical Value: {result['critical_value']}\n")
-        f.write(f"Reject Null Hypothesis: {result['reject_null']}\n")
-        f.write(f"Uniform generator : {result['Uniform generator']}\n")
-
-    # Perform a Chi-Square test on the decimals of pi
-    # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
-    result = chi2_test([int(digit) for digit in pi_decimals])
-
-    with open("pi_decimals_test_results.txt", "a") as f:
         f.write(f"----------- Chi-Square test -----------\n")
         f.write(f"Observed counts: {result['observed_counts']}\n")
         f.write(f"Expected counts: {result['expected_counts']}\n")
@@ -391,11 +339,13 @@ if __name__ == "__main__":
     # Get the decimals of pi from a file
     pi_decimals = get_pi_decimals("pi_decimals_single_line.txt")
 
+
+    alpha = 0.05
     sequence_length = 1000
 
-    custom_generator_test(pi_decimals,sequence_length)
+    custom_generator_test(pi_decimals, sequence_length, alpha)
 
-    python_generator_test(sequence_length)
+    python_generator_test(sequence_length, alpha)
 
     #pi_decimals_test(pi_decimals)
 
