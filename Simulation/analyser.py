@@ -1,39 +1,60 @@
 import random
 from collections import Counter
 import math
-
 import numpy as np
 from scipy.stats import chi2
 
-
-# This function reads a file containing the decimals of pi and returns them as a list of integers.
 def get_pi_decimals(file):
+    """
+    Read the decimals of pi from a file.
+
+    Parameters:
+    file (str): The path to the file containing the decimals of pi.
+
+    Returns:
+    str: A string containing the decimals of pi.
+    """
     with open(file, 'r') as f:
         pi_decimals = f.read().strip()
     return pi_decimals
 
 
 def generate_lcg(seed, a=1664525, c=1013904223, m=2 ** 32):
+    """
+    Generate a sequence of random numbers using a Linear Congruential Generator (LCG).
+
+    The LCG is a simple pseudo-random number generator algorithm that uses a linear equation to generate a sequence of numbers.
+
+    Parameters:
+    seed (int): The initial value (seed) for the generator.
+    a (int): The multiplier coefficient. Default is 1664525.
+    c (int): The increment coefficient. Default is 1013904223.
+    m (int): The modulus. Default is 2^32.
+
+    Yields:
+    float: A pseudo-random number in the range [0, 1).
+    """
     state = seed
     while True:
         state = (a * state + c) % m
         yield state / m
 
 
-def pi_based_lcg(pi_decimals, num_values):
-    # Extraire un entier comme graine à partir des décimales de π
-    seed = int(pi_decimals[:10])  # Utiliser les 10 premières décimales pour la graine
-    lcg = generate_lcg(seed)
-
-    # Produire num_values valeurs
-    for _ in range(num_values):
-        yield next(lcg)
-
-# This function generates random numbers based on the decimals of pi.
-# It yields a new random number each time it is called.
 def generate_uniform_random_numbers(pi_decimals):
+    """
+    Generate an infinite sequence of uniform random numbers using a Linear Congruential Generator (LCG).
+
+    This function extracts a seed from the decimals of pi and uses it to initialize the LCG.
+
+    Parameters:
+    pi_decimals (str): A string containing the decimals of pi.
+
+    Yields:
+    float: A pseudo-random number in the range [0, 1).
+    """
     # Extract an integer as a seed from the decimals of pi
-    seed = int(pi_decimals[:10])  # Use the first 10 decimals for the seed
+    start_index = random.randint(0, len(pi_decimals) - 10)
+    seed = int(pi_decimals[start_index:start_index + 10])
 
     # Generate random numbers using a linear congruential generator
     lcg = generate_lcg(seed)
@@ -44,60 +65,73 @@ def generate_uniform_random_numbers(pi_decimals):
 
 
 def gap_test(sequence, alpha):
+    """
+    Perform a gap test on a sequence of numbers to check for uniform distribution.
+
+    The gap test checks the intervals (gaps) between occurrences of numbers within a specified range [a, b].
+    It then compares the observed gap frequencies with the expected frequencies using a chi-square test.
+
+    Parameters:
+    sequence (list of float): The sequence of numbers to be tested.
+    alpha (float): The significance level for the chi-square test.
+
+    Returns:
+    dict: A dictionary containing the observed counts, expected counts, chi-square statistic, critical value, and a boolean indicating whether to reject the null hypothesis.
+    """
     sequence_length = len(sequence)
     m = 5
 
-    # Intervalle [a, b]
-    a, b = 0.1, 0.5  # Travailler avec des valeurs normalisées entre 0 et 1
-    p = (b - a)  # Probabilité p de tomber dans [a, b]
+    # Interval [a, b]
+    a, b = 0.1, 0.5  # Working with normalized values between 0 and 1
+    p = (b - a)  # Probability p of falling within [a, b]
 
-    # Conversion des valeurs dans l'intervalle [0, 1]
+    # Convert values to the interval [0, 1]
     sequence = [float(f"0.{str(x)[2:]}") for x in sequence]
 
-    # Marquage des valeurs dans l'intervalle [a, b]
-    marqués = np.zeros(sequence_length, dtype=bool)
+    # Mark values within the interval [a, b]
+    marked = np.zeros(sequence_length, dtype=bool)
     for i in range(sequence_length):
         if a <= sequence[i] <= b:
-            marqués[i] = True
+            marked[i] = True
 
-    # Calcul des gaps
+    # Calculate gaps
     gaps = []
     gap = 0
-    for marqué in marqués:
-        if marqué:
+    for mark in marked:
+        if mark:
             gaps.append(gap)
             gap = 0
         else:
             gap += 1
-    gaps.append(gap)  # Ajouter le dernier gap
+    gaps.append(gap)  # Add the last gap
 
-    # Calcul des probabilités théoriques des gaps
+    # Calculate theoretical probabilities of gaps
     max_gap = max(gaps)
-    probs_théoriques = [(1 - p) ** i * p for i in range(max_gap + 1)]
-    probs_théoriques.append((1 - p) ** (max_gap + 1))
+    theoretical_probs = [(1 - p) ** i * p for i in range(max_gap + 1)]
+    theoretical_probs.append((1 - p) ** (max_gap + 1))
 
-    # Calcul des occurrences observées
+    # Calculate observed occurrences
     occurrences = np.bincount(gaps)
 
-    # Élargir la liste des occurrences si nécessaire
-    if len(occurrences) < len(probs_théoriques):
-        occurrences = np.append(occurrences, [0] * (len(probs_théoriques) - len(occurrences)))
+    # Extend the list of occurrences if necessary
+    if len(occurrences) < len(theoretical_probs):
+        occurrences = np.append(occurrences, [0] * (len(theoretical_probs) - len(occurrences)))
 
-    # Nombre de gaps
+    # Number of gaps
     N = len(gaps)
 
-    # Valeurs attendues
-    valeurs_attendues = [N * p for p in probs_théoriques]
+    # Expected values
+    expected_values = [N * p for p in theoretical_probs]
 
-    # Test du chi²
-    chi2_stat = np.sum((occurrences - valeurs_attendues) ** 2 / valeurs_attendues)
-    chi2_critical = chi2.ppf(1 - alpha, len(probs_théoriques) - 1)
+    # Chi-square test
+    chi2_stat = np.sum((occurrences - expected_values) ** 2 / expected_values)
+    chi2_critical = chi2.ppf(1 - alpha, len(theoretical_probs) - 1)
 
     reject_null = chi2_stat > chi2_critical
 
     return {
         "observed_counts": occurrences,
-        "expected_counts": valeurs_attendues,
+        "expected_counts": expected_values,
         "chi_square_statistic": chi2_stat,
         "critical_value": chi2_critical,
         "reject_null": reject_null
@@ -105,6 +139,17 @@ def gap_test(sequence, alpha):
 
 # Fonction pour déterminer la catégorie de poker
 def poker_category(rolls):
+    """
+    Determine the poker category of a given set of rolls.
+
+    This function categorizes a set of rolls into one of the poker hand categories such as Poker, Carré, Full, Brelan, Double paire, Paire, or Rien.
+
+    Parameters:
+    rolls (list of int): A list of integers representing the rolls.
+
+    Returns:
+    str: The category of the poker hand.
+    """
     counts = Counter(rolls).values()
     count_values = sorted(counts, reverse=True)
     if count_values[0] == 5:
@@ -123,6 +168,18 @@ def poker_category(rolls):
         return "Rien"
 
 def stirling_number(n, k):
+    """
+    Calculate the Stirling number of the second kind.
+
+    The Stirling number of the second kind, S(n, k), represents the number of ways to partition a set of n objects into k non-empty subsets.
+
+    Parameters:
+    n (int): The total number of objects.
+    k (int): The number of non-empty subsets.
+
+    Returns:
+    int: The Stirling number of the second kind, S(n, k).
+    """
     if n == k == 0:
         return 1
     if n == 0 or k == 0:
@@ -130,6 +187,18 @@ def stirling_number(n, k):
     return k * stirling_number(n-1, k) + stirling_number(n-1, k-1)
 
 def poker_probabilities(k, d):
+    """
+    Calculate the probabilities of different poker hand categories.
+
+    This function calculates the probabilities of obtaining different poker hand categories given the number of rolls and the number of distinct values.
+
+    Parameters:
+    k (int): The number of rolls.
+    d (int): The number of distinct values.
+
+    Returns:
+    list of float: A list of probabilities for each poker hand category.
+    """
     probabilities = []
     for r in range(1, k+1):
         S = stirling_number(k, r)
@@ -139,16 +208,21 @@ def poker_probabilities(k, d):
     return probabilities
 
 def calculate_probabilities(n, m):
-    '''
+    """
+    Calculate the probabilities of different poker hand categories for a given set size and number of digits.
 
-    :param n: quantity of numbers by set
-    :param m: number of digits after the decimal point
-    :return:
-    '''
+    This function calculates the probabilities of obtaining different poker hand categories given the number of numbers in a set and the number of digits after the decimal point.
 
+    Parameters:
+    n (int): The quantity of numbers by set.
+    m (int): The number of digits after the decimal point.
+
+    Returns:
+    dict: A dictionary containing the probabilities for each poker hand category.
+    """
     d = 10
 
-    # Probabilités des différentes configurations
+    # Probabilities of different configurations
     P_poker, P_full_carre, P_brelan_double_paire, P_paire, P_rien = poker_probabilities(m, d)
 
     prob = {
@@ -161,17 +235,23 @@ def calculate_probabilities(n, m):
 
     return {k: p * n for k, p in prob.items()}
 
-#calculer la proba d'avoir n case differente
 def poker_test(sequence, alpha):
-    '''
+    """
+    Perform a poker test on a sequence of numbers to check for randomness.
 
-    :param sequence: list of numbers
-    :param m: number of digits after the decimal point
-    :return:
-    '''
-    if(type(sequence[0]) == float):
+    The poker test categorizes the numbers into poker hand categories and compares the observed frequencies with the expected frequencies using a chi-square test.
+
+    Parameters:
+    sequence (list of float): The sequence of numbers to be tested.
+    alpha (float): The significance level for the chi-square test.
+
+    Returns:
+    dict: A dictionary containing the observed counts, expected counts, chi-square statistic, critical value, and a boolean indicating whether to reject the null hypothesis.
+    """
+    if isinstance(sequence[0], float):
         for i in range(len(sequence)):
             sequence[i] = format(sequence[i], '.5f')
+
     # Calculate the observed counts
     m = len(sequence[0][2:])
     categories = [poker_category(digits[2:]) for digits in sequence]
@@ -182,10 +262,10 @@ def poker_test(sequence, alpha):
     # Calculate the expected probabilities
     expected_counts = calculate_probabilities(len(sequence), m)
 
-    # Associer les probabilités aux catégories
+    # Associate the probabilities with categories
     categories = ["Poker", "Carré ou Full", "Brelan ou Double Paire", "Paire", "Rien"]
 
-    # Combinaison des comptes Carré et Full
+    # Combine counts for Carré and Full
     if 'Carré' in observed_counts and 'Full' in observed_counts:
         observed_counts['Carré ou Full'] = observed_counts.pop('Carré') + observed_counts.pop('Full')
     else:
@@ -195,7 +275,7 @@ def poker_test(sequence, alpha):
         if 'Full' in observed_counts:
             observed_counts['Carré ou Full'] += observed_counts.pop('Full')
 
-    # Combinaison des comptes Brelan et Double Paire
+    # Combine counts for Brelan and Double Paire
     if 'Brelan' in observed_counts and 'Double paire' in observed_counts:
         observed_counts['Brelan ou Double Paire'] = observed_counts.pop('Brelan') + observed_counts.pop('Double paire')
     else:
@@ -207,7 +287,6 @@ def poker_test(sequence, alpha):
 
     observed_counts = dict(sorted(observed_counts.items()))
     expected_counts = dict(sorted(expected_counts.items()))
-
 
     chi2_stat = sum((observed_counts.get(cat, 0) - expected_counts.get(cat, 0)) ** 2 / expected_counts.get(cat, 0) for cat in expected_counts)
     df = len(expected_counts) - 1
@@ -224,6 +303,18 @@ def poker_test(sequence, alpha):
     }
 
 def chi2_test(sequence, alpha):
+    """
+    Perform a chi-square test on a sequence of numbers to check for uniform distribution.
+
+    The chi-square test compares the observed frequencies of numbers in different intervals with the expected frequencies.
+
+    Parameters:
+    sequence (list of float): The sequence of numbers to be tested.
+    alpha (float): The significance level for the chi-square test.
+
+    Returns:
+    dict: A dictionary containing the observed counts, expected counts, chi-square statistic, critical value, and a boolean indicating whether to reject the null hypothesis.
+    """
     intervals = np.linspace(0, 1, 11)
 
     observed_frequencies, _ = np.histogram(sequence, bins=intervals)
