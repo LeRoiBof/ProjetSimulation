@@ -82,7 +82,7 @@ def gap_test(sequence, alpha):
     m = 5
 
     # Interval [a, b]
-    a, b = 0.1, 0.5  # Working with normalized values between 0 and 1
+    a, b = 0.2, 0.8  # Working with normalized values between 0 and 1
     p = (b - a)  # Probability p of falling within [a, b]
 
     # Convert values to the interval [0, 1]
@@ -125,6 +125,7 @@ def gap_test(sequence, alpha):
 
     # Chi-square test
     chi2_stat = np.sum((occurrences - expected_values) ** 2 / expected_values)
+
     chi2_critical = chi2.ppf(1 - alpha, len(theoretical_probs) - 1)
 
     reject_null = chi2_stat > chi2_critical
@@ -235,7 +236,7 @@ def calculate_probabilities(n, m):
 
     return {k: p * n for k, p in prob.items()}
 
-def poker_test(sequence, alpha):
+def poker_test(numbers, alpha):
     """
     Perform a poker test on a sequence of numbers to check for randomness.
 
@@ -248,12 +249,32 @@ def poker_test(sequence, alpha):
     Returns:
     dict: A dictionary containing the observed counts, expected counts, chi-square statistic, critical value, and a boolean indicating whether to reject the null hypothesis.
     """
+    sequence = numbers.copy()
     if isinstance(sequence[0], float):
         for i in range(len(sequence)):
-            sequence[i] = format(sequence[i], '.5f')
+            sequence[i] = str(sequence[i])
 
+    sequence_new = []
+
+    for i in range(len(sequence)):
+        if(sequence[i][1] == "."):
+            sequence[i] = sequence[i][2:]
+
+    for i in range(len(sequence)):
+        for j in range(0, len(sequence[i])-5, 5):
+            sequence_new.append(sequence[i][j: j+5])
+
+    if sequence_new != [] :
+        sequence = sequence_new
+
+    for i in range(len(sequence)):
+        sequence[i] = "0." + sequence[i]
+
+    #print(sequence)
     # Calculate the observed counts
     m = len(sequence[0][2:])
+
+    #print(sequence)
     categories = [poker_category(digits[2:]) for digits in sequence]
     observed = Counter(categories)
 
@@ -318,6 +339,8 @@ def chi2_test(sequence, alpha):
     intervals = np.linspace(0, 1, 11)
 
     observed_frequencies, _ = np.histogram(sequence, bins=intervals)
+
+    print(observed_frequencies)
 
     expected_frequencies = np.ones(len(observed_frequencies)) * len(sequence) / len(observed_frequencies)
 
@@ -413,7 +436,8 @@ def python_generator_test(sequence_length, alpha):
 
     # Perform a Chi-Square test on the generated random numbers
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
-    result = chi2_test(random_numbers,alpha)
+    print(random_numbers[0])
+    result = chi2_test(random_numbers, alpha)
 
     with open("python_generator_test_results.txt", "a") as f:
         f.write(f"----------- Chi-Square test -----------\n")
@@ -423,6 +447,44 @@ def python_generator_test(sequence_length, alpha):
         f.write(f"Critical value: {result['critical_value']}\n")
         f.write(f"Reject null hypothesis: {result['reject_null']}\n")
 
+def pi_decimal_test(pi_decimal, alpha):
+    random_numbers = []
+    for i in range(0,len(pi_decimal) - 5, 5):
+        random_numbers.append("0."+pi_decimal[i:(i+5)])
+    # Perform a gap test
+    # The gap test checks if the numbers in the sequence are uniformly distributed
+    result = gap_test(random_numbers, alpha)
+    with open("pi_decimals_test_results.txt", "w") as f:
+        f.write(f"----------- Gap test -----------\n")
+        f.write(f"Observed counts: {result['observed_counts']}\n")
+        f.write(f"Expected counts: {result['expected_counts']}\n")
+        f.write(f"Chi-square statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical value: {result['critical_value']}\n")
+        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
+
+    # Perform a poker test on the generated random numbers
+    # The poker test checks if the numbers in the sequence are randomly distributed
+    result = poker_test(random_numbers, alpha)
+
+    with open("pi_decimals_test_results.txt", "a") as f:
+        f.write(f"----------- Poker test -----------\n")
+        f.write(f"Observed Counts: {result['observed_counts']}\n")
+        f.write(f"Expected Counts: {result['expected_counts']}\n")
+        f.write(f"Chi2 Statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical Value: {result['critical_value']}\n")
+        f.write(f"Reject Null Hypothesis: {result['reject_null']}\n")
+
+    # Perform a Chi-Square test on the generated random numbers
+    # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
+    result = chi2_test(random_numbers, alpha)
+
+    with open("pi_decimals_test_results.txt", "a") as f:
+        f.write(f"----------- Chi-Square test -----------\n")
+        f.write(f"Observed counts: {result['observed_counts']}\n")
+        f.write(f"Expected counts: {result['expected_counts']}\n")
+        f.write(f"Chi-square statistic: {result['chi_square_statistic']}\n")
+        f.write(f"Critical value: {result['critical_value']}\n")
+        f.write(f"Reject null hypothesis: {result['reject_null']}\n")
 
 
 if __name__ == "__main__":
@@ -436,6 +498,8 @@ if __name__ == "__main__":
     custom_generator_test(pi_decimals, sequence_length, alpha)
 
     python_generator_test(sequence_length, alpha)
+
+    pi_decimal_test(pi_decimals, alpha)
 
 
 
