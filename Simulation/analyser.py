@@ -270,11 +270,10 @@ def poker_test(numbers, alpha):
     for i in range(len(sequence)):
         sequence[i] = "0." + sequence[i]
 
-    #print(sequence)
+
     # Calculate the observed counts
     m = len(sequence[0][2:])
 
-    #print(sequence)
     categories = [poker_category(digits[2:]) for digits in sequence]
     observed = Counter(categories)
 
@@ -339,8 +338,6 @@ def chi2_test(sequence, alpha):
     intervals = np.linspace(0, 1, 11)
 
     observed_frequencies, _ = np.histogram(sequence, bins=intervals)
-
-    print(observed_frequencies)
 
     expected_frequencies = np.ones(len(observed_frequencies)) * len(sequence) / len(observed_frequencies)
 
@@ -436,7 +433,6 @@ def python_generator_test(sequence_length, alpha):
 
     # Perform a Chi-Square test on the generated random numbers
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
-    print(random_numbers[0])
     result = chi2_test(random_numbers, alpha)
 
     with open("python_generator_test_results.txt", "a") as f:
@@ -462,8 +458,8 @@ def pi_decimal_test(pi_decimal, alpha):
         f.write(f"Critical value: {result['critical_value']}\n")
         f.write(f"Reject null hypothesis: {result['reject_null']}\n")
 
-    # Perform a poker test on the generated random numbers
-    # The poker test checks if the numbers in the sequence are randomly distributed
+    # Perform a poker test on the pi decimal
+    # The poker test checks if the numbers in the sequence are uniformly distributed
     result = poker_test(random_numbers, alpha)
 
     with open("pi_decimals_test_results.txt", "a") as f:
@@ -474,7 +470,7 @@ def pi_decimal_test(pi_decimal, alpha):
         f.write(f"Critical Value: {result['critical_value']}\n")
         f.write(f"Reject Null Hypothesis: {result['reject_null']}\n")
 
-    # Perform a Chi-Square test on the generated random numbers
+    # Perform a Chi-Square test on the pi decimals
     # The Chi-Square test checks if the observed counts of numbers in the sequence are significantly different from the expected counts
     result = chi2_test(random_numbers, alpha)
 
